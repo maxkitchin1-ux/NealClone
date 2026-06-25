@@ -147,3 +147,291 @@ if (window.location.pathname.includes("CrystalCollector.html")) {
 
     loop();
 }
+
+// ======================
+// NAVIGATION
+// ======================
+function openGame(page) {
+    window.location.href = page;
+}
+
+function goHome() {
+    window.location.href = "index.html";
+}
+
+// ======================
+// MAZE GAME ONLY
+// ======================
+if (window.location.pathname.includes("MazeGame.html")) {
+
+    const game = document.getElementById("game");
+    const ctx = game.getContext("2d");
+
+    const editor = document.getElementById("editor");
+    const ectx = editor.getContext("2d");
+
+    function resize() {
+        game.width = innerWidth;
+        game.height = innerHeight;
+    }
+
+    addEventListener("resize", resize);
+    resize();
+
+    // ======================
+    // MAP SYSTEM
+    // ======================
+    let SIZE = 64;
+    let map = [];
+
+    function build(size) {
+
+        SIZE = size;
+        map = [];
+
+        for (let y = 0; y < SIZE; y++) {
+            map[y] = [];
+
+            for (let x = 0; x < SIZE; x++) {
+
+                if (
+                    x === 0 || y === 0 ||
+                    x === SIZE - 1 || y === SIZE - 1
+                ) {
+                    map[y][x] = 1;
+                } else {
+                    map[y][x] = Math.random() < 0.25 ? 1 : 0;
+                }
+            }
+        }
+
+        // spawn safe area
+        map[1][1] = map[1][2] = map[2][1] = map[2][2] = 0;
+
+        player.x = 2.5;
+        player.y = 2.5;
+
+        drawEditor();
+    }
+
+    window.newMap = function () {
+        build(
+            Math.max(8, Math.min(128,
+                +document.getElementById("size").value || 64
+            ))
+        );
+    };
+
+    // ======================
+    // EDITOR
+    // ======================
+    function drawEditor() {
+
+        let cell = editor.width / SIZE;
+
+        ectx.fillStyle = "black";
+        ectx.fillRect(0, 0, editor.width, editor.height);
+
+        for (let y = 0; y < SIZE; y++) {
+            for (let x = 0; x < SIZE; x++) {
+
+                ectx.fillStyle = map[y][x] ? "white" : "black";
+
+                ectx.fillRect(
+                    x * cell,
+                    y * cell,
+                    cell,
+                    cell
+                );
+
+                ectx.strokeStyle = "#333";
+                ectx.strokeRect(
+                    x * cell,
+                    y * cell,
+                    cell,
+                    cell
+                );
+            }
+        }
+    }
+
+    let painting = false;
+    let drawMode = 1;
+
+    function paintCell(e) {
+
+        let rect = editor.getBoundingClientRect();
+        let cell = editor.width / SIZE;
+
+        let x = Math.floor((e.clientX - rect.left) / cell);
+        let y = Math.floor((e.clientY - rect.top) / cell);
+
+        if (
+            x < 1 || y < 1 ||
+            x >= SIZE - 1 || y >= SIZE - 1
+        ) return;
+
+        map[y][x] = drawMode;
+        drawEditor();
+    }
+
+    editor.onmousedown = e => {
+        painting = true;
+
+        let rect = editor.getBoundingClientRect();
+        let cell = editor.width / SIZE;
+
+        let x = Math.floor((e.clientX - rect.left) / cell);
+        let y = Math.floor((e.clientY - rect.top) / cell);
+
+        drawMode = map[y][x] ? 0 : 1;
+
+        paintCell(e);
+    };
+
+    editor.onmousemove = e => {
+        if (painting) paintCell(e);
+    };
+
+    addEventListener("mouseup", () => painting = false);
+
+    // ======================
+    // PLAYER
+    // ======================
+    const player = {
+        x: 2.5,
+        y: 2.5,
+        a: 0
+    };
+
+    const keys = {};
+    let flashlight = true;
+
+    addEventListener("keydown", e => {
+
+        keys[e.key.toLowerCase()] = true;
+
+        if (e.code === "Space") {
+            flashlight = !flashlight;
+
+            document.getElementById("flashText").textContent =
+                "Flashlight: " + (flashlight ? "ON" : "OFF");
+        }
+    });
+
+    addEventListener("keyup", e => {
+        keys[e.key.toLowerCase()] = false;
+    });
+
+    function wall(x, y) {
+        x = Math.floor(x);
+        y = Math.floor(y);
+
+        return (
+            x < 0 || y < 0 ||
+            x >= SIZE || y >= SIZE ||
+            map[y][x]
+        );
+    }
+
+    function update() {
+
+        const speed = 0.03;
+        const turn = 0.04;
+
+        if (keys["arrowleft"]) player.a -= turn;
+        if (keys["arrowright"]) player.a += turn;
+
+        let dx = 0, dy = 0;
+
+        if (keys["w"]) {
+            dx += Math.cos(player.a) * speed;
+            dy += Math.sin(player.a) * speed;
+        }
+
+        if (keys["s"]) {
+            dx -= Math.cos(player.a) * speed;
+            dy -= Math.sin(player.a) * speed;
+        }
+
+        if (keys["a"]) {
+            dx += Math.cos(player.a - Math.PI / 2) * speed;
+            dy += Math.sin(player.a - Math.PI / 2) * speed;
+        }
+
+        if (keys["d"]) {
+            dx += Math.cos(player.a + Math.PI / 2) * speed;
+            dy += Math.sin(player.a + Math.PI / 2) * speed;
+        }
+
+        if (!wall(player.x + dx, player.y)) player.x += dx;
+        if (!wall(player.x, player.y + dy)) player.y += dy;
+    }
+
+    // ======================
+    // RENDER
+    // ======================
+    function render() {
+
+        ctx.fillStyle = "#4aa3ff";
+        ctx.fillRect(0, 0, game.width, game.height / 2);
+
+        ctx.fillStyle = "#333";
+        ctx.fillRect(0, game.height / 2, game.width, game.height / 2);
+
+        const FOV = Math.PI / 3;
+
+        for (let x = 0; x < game.width; x++) {
+
+            let rayAngle =
+                player.a - FOV / 2 +
+                (x / game.width) * FOV;
+
+            let distance = 0;
+
+            while (distance < 80) {
+                distance += 0.02;
+
+                let rx = player.x + Math.cos(rayAngle) * distance;
+                let ry = player.y + Math.sin(rayAngle) * distance;
+
+                if (wall(rx, ry)) break;
+            }
+
+            distance *= Math.cos(rayAngle - player.a);
+
+            let height = Math.min(game.height, game.height / (distance + 0.001));
+
+            let brightness;
+
+            if (flashlight) {
+
+                let centerDist = Math.abs(x - game.width / 2);
+                let beam = Math.max(0, 1 - centerDist / (game.width * 0.22));
+
+                brightness = Math.max(0, (255 - distance * 12) * beam);
+
+            } else {
+                brightness = 4;
+            }
+
+            ctx.fillStyle = `rgb(${brightness},${brightness * 0.8},${brightness * 0.6})`;
+
+            ctx.fillRect(
+                x,
+                (game.height - height) / 2,
+                1,
+                height
+            );
+        }
+    }
+
+    function loop() {
+        update();
+        render();
+        requestAnimationFrame(loop);
+    }
+
+    build(64);
+    loop();
+}
