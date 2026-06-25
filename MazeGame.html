@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Maze Game</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <div id="ui">
+        <b>Controls</b><br>
+        W,A,S,D = Move<br>
+        ← → = Turn<br>
+        Space = Flashlight<br><br>
+
+        Map Size:
+        <input id="size" type="number" value="64" min="8" max="128">
+        <button onclick="newMap()">Generate</button>
+
+        <br><br>
+
+        Click grid to edit walls.<br><br>
+
+        <span id="flashText">Flashlight: ON</span><br><br>
+
+        <button onclick="goHome()">🏠 Home</button>
+    </div>
+
+    <canvas id="game"></canvas>
+    <canvas id="editor" width="320" height="320"></canvas>
+
+    <script src="script.js"></script>
+</body>
+</html>
