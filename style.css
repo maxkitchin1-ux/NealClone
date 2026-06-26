@@ -89,6 +89,36 @@ canvas {
     height: 320px;
     border: 2px solid gray;
     background: #111;
+
+
+    #hud {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    color: white;
+    font-size: 22px;
+    z-index: 10;
+}
+
+#restartBtn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    display: none;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: #111;
+    border: 1px solid white;
+    color: white;
+    cursor: pointer;
+    z-index: 10;
+}
+
+#restartBtn img {
+    width: 18px;
+    height: 18px;
+}
     z-index: 5;
 }
 
